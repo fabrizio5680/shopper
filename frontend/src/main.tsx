@@ -8,11 +8,11 @@ async function main() {
   const root = createRoot(document.getElementById('root')!)
 
   if (import.meta.env.DEV) {
-    const { DevTools } = await import('jotai-devtools')
-    await import('jotai-devtools/styles.css')
+    // const { DevTools } = await import('jotai-devtools')
+    // await import('jotai-devtools/styles.css')
     root.render(
       <StrictMode>
-        <DevTools />
+        {/* <DevTools /> */}
         <App />
       </StrictMode>,
     )

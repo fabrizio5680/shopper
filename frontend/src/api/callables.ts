@@ -5,6 +5,8 @@ import type {
   ExtractIngredientsResponse,
   SaveIngredientsRequest,
   SaveIngredientsResponse,
+  SaveRecipeRequest,
+  SaveRecipeResponse,
   RescanIngredientsRequest,
   RescanIngredientsResponse,
   DeleteRecipeSearchRequest,
@@ -30,3 +32,8 @@ export const deleteRecipeSearch = httpsCallable<
   DeleteRecipeSearchRequest,
   DeleteRecipeSearchResponse
 >(functions, 'deleteRecipeSearch')
+
+export const saveRecipe = httpsCallable<
+  SaveRecipeRequest,
+  SaveRecipeResponse
+>(functions, 'saveRecipe')

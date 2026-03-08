@@ -38,13 +38,9 @@ export default function Dashboard() {
   }
 
   const handleApprovalSave = async (groupId: string, approved: SuggestedIngredient[]) => {
-    try {
-      await saveIngredients({ groupId, ingredients: approved })
-      setPanel({ mode: 'none' })
-      navigate(`/search/${groupId}`)
-    } catch {
-      // Error is handled in IngredientApprovalPanel
-    }
+    await saveIngredients({ groupId, ingredients: approved })
+    setPanel({ mode: 'none' })
+    navigate(`/search/${groupId}`)
   }
 
   const handleApprovalCancel = async () => {

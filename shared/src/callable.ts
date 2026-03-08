@@ -67,3 +67,12 @@ export interface DeleteRecipeSearchRequest {
 export interface DeleteRecipeSearchResponse {
   success: boolean
 }
+
+// saveRecipe
+export interface SaveRecipeRequest {
+  recipeSearchId: string
+}
+
+export interface SaveRecipeResponse {
+  recipeId: string
+}

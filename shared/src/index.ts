@@ -8,6 +8,8 @@ export type {
   Ingredient,
   SuggestedIngredient,
   RecipeSearch,
+  RecipeIngredient,
+  Recipe,
 } from './types'
 
 export { PILLS, PILL_CATEGORIES } from './pills'
@@ -25,4 +27,6 @@ export type {
   SaveManualIngredientResponse,
   DeleteRecipeSearchRequest,
   DeleteRecipeSearchResponse,
+  SaveRecipeRequest,
+  SaveRecipeResponse,
 } from './callable'

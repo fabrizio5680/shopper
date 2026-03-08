@@ -15,6 +15,10 @@ export function ingredientsCol(userId: string, groupId: string) {
   return db.collection(`users/${userId}/recipeSearches/${groupId}/ingredients`)
 }
 
+export function recipeRef(userId: string, recipeId: string) {
+  return db.doc(`users/${userId}/recipes/${recipeId}`)
+}
+
 export async function checkRateLimit(
   userId: string,
   key: keyof typeof RATE_LIMITS

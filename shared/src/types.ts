@@ -52,3 +52,17 @@ export interface RecipeSearch {
   createdAt: Date
   ingredients: Ingredient[]
 }
+
+export interface RecipeIngredient {
+  name: string
+  quantity: string
+  notes: string
+}
+
+export interface Recipe {
+  id: string
+  recipeSearchId: string
+  recipeName: string
+  ingredients: RecipeIngredient[]
+  updatedAt: Date
+}

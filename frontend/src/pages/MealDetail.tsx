@@ -1,13 +1,16 @@
-import { useState } from 'react'
-import { useAtom } from 'jotai'
+import { useEffect, useRef, useState } from 'react'
+import { useAtom, useAtomValue } from 'jotai'
 import { useParams, Link } from 'react-router-dom'
-import { ChevronLeft, Loader2, RotateCcw, Wrench, ShoppingBasket } from 'lucide-react'
+import { ChevronLeft, Loader2, Pencil, RotateCcw, Wrench, ShoppingBasket } from 'lucide-react'
+import { collection, doc, onSnapshot, updateDoc } from 'firebase/firestore'
 import Layout from '../components/layout/Layout'
 import SupermarketTabs from '../components/products/SupermarketTabs'
 import IngredientApprovalPanel from '../components/meals/IngredientApprovalPanel'
 import ManualIngredientSearch from '../components/meals/ManualIngredientSearch'
 import type { Ingredient, Product, Supermarket, SuggestedIngredient } from '../types'
-import { MOCK_SUGGESTED_INGREDIENTS } from '../data/mock'
+import { saveIngredients, rescanIngredients, saveRecipe } from '../api/callables'
+import { db } from '../firebase'
+import { userAtom } from '../atoms/auth'
 import { searchesAtom } from '../atoms/searches'
 import { PILLS } from '../data/pills'
 import { SUPERMARKETS, SUPERMARKET_META, SEARCH_STATUS_STYLES } from '../styles/design-tokens'
@@ -33,6 +36,41 @@ export default function MealDetail() {
   const [rescanning, setRescanning] = useState(false)
   const [rescanSuggestions, setRescanSuggestions] = useState<SuggestedIngredient[] | null>(null)
   const [showManualSearch, setShowManualSearch] = useState(false)
+  const [editingIngredientId, setEditingIngredientId] = useState<string | null>(null)
+  const editCancelRef = useRef(false)
+  const user = useAtomValue(userAtom)
+
+  useEffect(() => {
+    if (!user || !id) return
+
+    const colRef = collection(db, `users/${user.uid}/recipeSearches/${id}/ingredients`)
+    const unsub = onSnapshot(colRef, (snap) => {
+      const ingredients: Ingredient[] = snap.docs.map((d) => {
+        const data = d.data()
+        return {
+          id: d.id,
+          name: data.name ?? '',
+          quantity: data.quantity ?? '',
+          notes: data.notes ?? '',
+          searchStatus: data.searchStatus ?? 'pending',
+          source: data.source ?? 'ai',
+          products: data.products ?? [],
+          selectedProducts: data.selectedProducts ?? null,
+        }
+      })
+      setSearches(prev => prev.map(s =>
+        s.id === id ? { ...s, ingredients } : s,
+      ))
+    })
+
+    return () => {
+      unsub()
+      // Reset ingredients to avoid stale data on other pages
+      setSearches(prev => prev.map(s =>
+        s.id === id ? { ...s, ingredients: [] } : s,
+      ))
+    }
+  }, [user, id, setSearches])
 
   if (!search) {
     return (
@@ -54,26 +92,18 @@ export default function MealDetail() {
 
   const handleRescan = async () => {
     setRescanning(true)
-    await new Promise(r => setTimeout(r, 1500))
-    setRescanSuggestions(MOCK_SUGGESTED_INGREDIENTS.slice(0, 3))
-    setRescanning(false)
+    try {
+      const result = await rescanIngredients({ groupId: search.id })
+      setRescanSuggestions(result.data.suggestions)
+    } catch {
+      // Silently stop - could add error display later
+    } finally {
+      setRescanning(false)
+    }
   }
 
-  const handleRescanSave = (_groupId: string, approved: SuggestedIngredient[]) => {
-    const newIngredients: Ingredient[] = approved.map((ing, i) => ({
-      id: `rescan-${Date.now()}-${i}`,
-      name: ing.name,
-      quantity: ing.quantity,
-      notes: ing.notes,
-      searchStatus: 'pending',
-      source: 'ai',
-      selectedProducts: null,
-      products: [],
-    }))
-    setSearches(prev => prev.map(s => {
-      if (s.id !== id) return s
-      return { ...s, ingredients: [...s.ingredients, ...newIngredients] }
-    }))
+  const handleRescanSave = async (_groupId: string, approved: SuggestedIngredient[]) => {
+    await saveIngredients({ groupId: search.id, ingredients: approved })
     setRescanSuggestions(null)
   }
 
@@ -81,25 +111,58 @@ export default function MealDetail() {
     setShowManualSearch(false)
   }
 
-  const handleChooseProduct = (ingredientId: string, product: Product) => {
+  const commitIngredientName = async (ingredientId: string, rawValue: string, originalName: string) => {
+    setEditingIngredientId(null)
+    const trimmed = rawValue.trim()
+    if (trimmed.length === 0 || trimmed === originalName) return
+    if (!user || !id) return
+
+    try {
+      await updateDoc(doc(db, `users/${user.uid}/recipeSearches/${id}/ingredients/${ingredientId}`), {
+        name: trimmed,
+      })
+      saveRecipe({ recipeSearchId: id }).catch(() => {})
+    } catch {
+      // onSnapshot will restore the original name
+    }
+  }
+
+  const handleChooseProduct = async (ingredientId: string, product: Product) => {
+    if (!user || !id) return
+
+    const ing = search.ingredients.find(i => i.id === ingredientId)
+    if (!ing) return
+
+    const current = ing.selectedProducts ?? {}
+    const isAlreadyChosen = current[product.supermarket] === product.id
+    const updated = { ...current }
+    if (isAlreadyChosen) {
+      delete updated[product.supermarket]
+    } else {
+      updated[product.supermarket] = product.id
+    }
+
+    const newSelected = Object.keys(updated).length > 0 ? updated : null
+
+    // Optimistic update
     setSearches(prev => prev.map(s => {
       if (s.id !== id) return s
       return {
         ...s,
-        ingredients: s.ingredients.map(ing => {
-          if (ing.id !== ingredientId) return ing
-          const current = ing.selectedProducts ?? {}
-          const isAlreadyChosen = current[product.supermarket] === product.id
-          const updated = { ...current }
-          if (isAlreadyChosen) {
-            delete updated[product.supermarket]
-          } else {
-            updated[product.supermarket] = product.id
-          }
-          return { ...ing, selectedProducts: Object.keys(updated).length > 0 ? updated : null }
-        }),
+        ingredients: s.ingredients.map(i =>
+          i.id === ingredientId ? { ...i, selectedProducts: newSelected } : i,
+        ),
       }
     }))
+
+    // Persist to Firestore
+    try {
+      await updateDoc(doc(db, `users/${user.uid}/recipeSearches/${id}/ingredients/${ingredientId}`), {
+        selectedProducts: newSelected,
+      })
+    } catch {
+      // onSnapshot will restore the correct state
+    }
   }
 
   const selectedIngredient = search?.ingredients.find(i => i.id === selectedIngredientId) ?? null
@@ -166,7 +229,47 @@ export default function MealDetail() {
                     ].join(' ')}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="truncate">{ing.name}</span>
+                      {editingIngredientId === ing.id ? (
+                        <input
+                          type="text"
+                          maxLength={100}
+                          defaultValue={ing.name}
+                          autoFocus
+                          className="input-sm bg-cream/50 border-0 border-b border-parchment/70 rounded-none px-1 py-0.5 h-auto min-h-0 text-sm font-medium focus:ring-0 focus:border-forest-muted w-full"
+                          onClick={e => e.stopPropagation()}
+                          onBlur={e => {
+                            if (editCancelRef.current) {
+                              editCancelRef.current = false
+                              return
+                            }
+                            commitIngredientName(ing.id, e.currentTarget.value, ing.name)
+                          }}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              commitIngredientName(ing.id, e.currentTarget.value, ing.name)
+                            }
+                            if (e.key === 'Escape') {
+                              e.preventDefault()
+                              editCancelRef.current = true
+                              setEditingIngredientId(null)
+                            }
+                          }}
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 text-left min-w-0"
+                          onClick={e => {
+                            e.stopPropagation()
+                            setEditingIngredientId(ing.id)
+                          }}
+                          title="Edit ingredient name"
+                        >
+                          <span className="truncate">{ing.name}</span>
+                          <Pencil className="w-3 h-3 text-ink-ghost hover:text-forest-muted transition-colors flex-shrink-0" />
+                        </button>
+                      )}
                       <span className="flex items-center gap-1.5 flex-shrink-0">
                         {ing.searchStatus === 'searching' && (
                           <Loader2 className="w-3 h-3 animate-spin text-aldi" />
@@ -229,7 +332,44 @@ export default function MealDetail() {
             ) : (
               <div>
                 <div className="flex items-baseline gap-2 mb-5">
-                  <h2 className="font-display text-xl text-ink">{activeIngredient.name}</h2>
+                  {editingIngredientId === activeIngredient.id ? (
+                    <input
+                      type="text"
+                      maxLength={100}
+                      defaultValue={activeIngredient.name}
+                      autoFocus
+                      className="input-sm bg-cream/50 border-0 border-b border-parchment/70 rounded-none px-1 py-0.5 h-auto min-h-0 font-display text-xl focus:ring-0 focus:border-forest-muted"
+                      onClick={e => e.stopPropagation()}
+                      onBlur={e => {
+                        if (editCancelRef.current) {
+                          editCancelRef.current = false
+                          return
+                        }
+                        commitIngredientName(activeIngredient.id, e.currentTarget.value, activeIngredient.name)
+                      }}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          commitIngredientName(activeIngredient.id, e.currentTarget.value, activeIngredient.name)
+                        }
+                        if (e.key === 'Escape') {
+                          e.preventDefault()
+                          editCancelRef.current = true
+                          setEditingIngredientId(null)
+                        }
+                      }}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1.5 text-left"
+                      onClick={() => setEditingIngredientId(activeIngredient.id)}
+                      title="Edit ingredient name"
+                    >
+                      <h2 className="font-display text-xl text-ink">{activeIngredient.name}</h2>
+                      <Pencil className="w-4 h-4 text-ink-ghost hover:text-forest-muted transition-colors flex-shrink-0" />
+                    </button>
+                  )}
                   {activeIngredient.quantity && (
                     <span className="text-sm text-ink-faint">{activeIngredient.quantity}</span>
                   )}

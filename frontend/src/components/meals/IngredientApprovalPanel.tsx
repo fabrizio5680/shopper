@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { ExternalLink, Loader2, Check } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { ExternalLink, Loader2, Check, Pencil } from 'lucide-react'
 import type { SuggestedIngredient } from '../../types'
 import { supermarketSearchUrls } from '../../utils/supermarket-urls'
 import { SUPERMARKET_META } from '../../styles/design-tokens'
@@ -9,7 +9,7 @@ interface Props {
   groupId: string
   recipeName: string
   suggestions: SuggestedIngredient[]
-  onSave: (groupId: string, approved: SuggestedIngredient[]) => void
+  onSave: (groupId: string, approved: SuggestedIngredient[]) => Promise<void>
   onCancel: () => void
   variant?: 'initial' | 'rescan'
 }
@@ -23,7 +23,13 @@ export default function IngredientApprovalPanel({
   variant = 'initial',
 }: Props) {
   const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [editedNames, setEditedNames] = useState<Map<number, string>>(new Map())
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const cancelCommitRef = useRef<number | null>(null)
+
+  const getDisplayName = (i: number) => editedNames.get(i) ?? suggestions[i].name
 
   const toggleAll = () => {
     if (selected.size === suggestions.length) {
@@ -39,12 +45,42 @@ export default function IngredientApprovalPanel({
     setSelected(next)
   }
 
+  const commitEditedName = (i: number, rawValue: string) => {
+    const trimmed = rawValue.trim()
+
+    setEditedNames(prev => {
+      const next = new Map(prev)
+
+      if (trimmed.length === 0 || trimmed === suggestions[i].name) {
+        next.delete(i)
+      } else {
+        next.set(i, trimmed)
+      }
+
+      return next
+    })
+
+    setEditingIndex(null)
+  }
+
   const handleSave = async () => {
     if (selected.size === 0) return
     setSaving(true)
-    await new Promise(r => setTimeout(r, 800))
-    onSave(groupId, suggestions.filter((_, i) => selected.has(i)))
-    setSaving(false)
+    setError(null)
+    try {
+      const approved = [...selected]
+        .sort((a, b) => a - b)
+        .map(i => ({
+          ...suggestions[i],
+          name: getDisplayName(i).trim(),
+        }))
+      await onSave(groupId, approved)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to save ingredients. Please try again.'
+      setError(message)
+    } finally {
+      setSaving(false)
+    }
   }
 
   if (suggestions.length === 0) {
@@ -88,8 +124,9 @@ export default function IngredientApprovalPanel({
       {/* Ingredient list */}
       <ul>
         {suggestions.map((ing, i) => {
-          const urls = supermarketSearchUrls(ing.name)
+          const urls = supermarketSearchUrls(getDisplayName(i))
           const isSelected = selected.has(i)
+          const hasEditedName = getDisplayName(i) !== ing.name
           return (
             <li
               key={i}
@@ -111,7 +148,54 @@ export default function IngredientApprovalPanel({
               {/* Content */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-2 flex-wrap">
-                  <span className="font-semibold text-ink">{ing.name}</span>
+                  {editingIndex === i ? (
+                    <input
+                      type="text"
+                      maxLength={100}
+                      defaultValue={getDisplayName(i)}
+                      autoFocus
+                      className="input-sm bg-cream/50 border-0 border-b border-parchment/70 rounded-none px-1 py-0.5 h-auto min-h-0 focus:ring-0 focus:border-forest-muted"
+                      onClick={e => e.stopPropagation()}
+                      onBlur={e => {
+                        if (cancelCommitRef.current === i) {
+                          cancelCommitRef.current = null
+                          return
+                        }
+                        commitEditedName(i, e.currentTarget.value)
+                      }}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          commitEditedName(i, e.currentTarget.value)
+                          return
+                        }
+
+                        if (e.key === 'Escape') {
+                          e.preventDefault()
+                          cancelCommitRef.current = i
+                          setEditingIndex(null)
+                        }
+                      }}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1.5 text-left"
+                      onClick={e => {
+                        e.stopPropagation()
+                        setEditingIndex(i)
+                      }}
+                      title="Edit ingredient name"
+                    >
+                      <span className={hasEditedName ? 'font-semibold text-ink italic' : 'font-semibold text-ink'}>
+                        {getDisplayName(i)}
+                      </span>
+                      <Pencil className="w-3.5 h-3.5 text-ink-ghost hover:text-forest-muted transition-colors" />
+                      {hasEditedName && (
+                        <span className="text-ink-ghost text-xs">(edited)</span>
+                      )}
+                    </button>
+                  )}
                   {ing.quantity && (
                     <span className="text-sm text-ink-faint">{ing.quantity}</span>
                   )}
@@ -140,6 +224,12 @@ export default function IngredientApprovalPanel({
           )
         })}
       </ul>
+
+      {error && (
+        <div className="px-4 sm:px-6 py-2">
+          <p className="error-text">{error}</p>
+        </div>
+      )}
 
       {/* Footer */}
       <div className="card-footer flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
