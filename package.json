@@ -1,4 +1,10 @@
 {
   "private": true,
-  "workspaces": ["shared", "frontend", "functions"]
+  "workspaces": ["shared", "frontend", "functions"],
+  "scripts": {
+    "dev": "concurrently -n shared,frontend,emulators -c blue,green,yellow \"npm run build:watch -w shared\" \"npm run dev -w frontend\" \"firebase emulators:start\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
 }

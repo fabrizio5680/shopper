@@ -29,4 +29,6 @@ export type {
   DeleteRecipeSearchResponse,
   SaveRecipeRequest,
   SaveRecipeResponse,
+  SearchProductsRequest,
+  SearchProductsResponse,
 } from './callable'

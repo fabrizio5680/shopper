@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAtom, useAtomValue } from 'jotai'
 import { useParams, Link } from 'react-router-dom'
-import { ChevronLeft, Loader2, Pencil, RotateCcw, Wrench, ShoppingBasket } from 'lucide-react'
-import { collection, doc, onSnapshot, updateDoc } from 'firebase/firestore'
+import { ChevronLeft, Loader2, Pencil, Plus, RotateCcw, Search, Trash2, Wrench, ShoppingBasket } from 'lucide-react'
+import { addDoc, collection, deleteDoc, doc, onSnapshot, updateDoc } from 'firebase/firestore'
 import Layout from '../components/layout/Layout'
 import SupermarketTabs from '../components/products/SupermarketTabs'
 import IngredientApprovalPanel from '../components/meals/IngredientApprovalPanel'
 import ManualIngredientSearch from '../components/meals/ManualIngredientSearch'
 import type { Ingredient, Product, Supermarket, SuggestedIngredient } from '../types'
-import { saveIngredients, rescanIngredients, saveRecipe } from '../api/callables'
+import { saveIngredients, rescanIngredients, saveRecipe, searchProducts } from '../api/callables'
 import { db } from '../firebase'
 import { userAtom } from '../atoms/auth'
 import { searchesAtom } from '../atoms/searches'
@@ -38,6 +38,7 @@ export default function MealDetail() {
   const [showManualSearch, setShowManualSearch] = useState(false)
   const [editingIngredientId, setEditingIngredientId] = useState<string | null>(null)
   const editCancelRef = useRef(false)
+  const [fetchingProducts, setFetchingProducts] = useState(false)
   const user = useAtomValue(userAtom)
 
   useEffect(() => {
@@ -89,6 +90,7 @@ export default function MealDetail() {
   }
 
   const pillLabels = search.activePills.map(id => PILLS.find(p => p.id === id)?.label ?? id)
+  const hasPendingIngredients = search.ingredients.some(i => i.searchStatus === 'pending')
 
   const handleRescan = async () => {
     setRescanning(true)
@@ -109,6 +111,47 @@ export default function MealDetail() {
 
   const handleIngredientSaved = () => {
     setShowManualSearch(false)
+  }
+
+  const handleFetchProducts = async () => {
+    setFetchingProducts(true)
+    try {
+      await searchProducts({ groupId: search.id })
+    } catch {
+      // onSnapshot will reflect any partial status changes
+    } finally {
+      setFetchingProducts(false)
+    }
+  }
+
+  const handleAddIngredient = async () => {
+    if (!user || !id) return
+    const colRef = collection(db, `users/${user.uid}/recipeSearches/${id}/ingredients`)
+    try {
+      const ref = await addDoc(colRef, {
+        name: 'New ingredient',
+        quantity: '',
+        notes: '',
+        searchStatus: 'pending',
+        source: 'manual',
+        selectedProducts: null,
+      })
+      setEditingIngredientId(ref.id)
+      saveRecipe({ recipeSearchId: id }).catch(() => {})
+    } catch {
+      // onSnapshot will reflect state
+    }
+  }
+
+  const handleDeleteIngredient = async (ingredientId: string) => {
+    if (!user || !id) return
+    if (selectedIngredientId === ingredientId) setSelectedIngredientId(null)
+    try {
+      await deleteDoc(doc(db, `users/${user.uid}/recipeSearches/${id}/ingredients/${ingredientId}`))
+      saveRecipe({ recipeSearchId: id }).catch(() => {})
+    } catch {
+      // onSnapshot will reflect state
+    }
   }
 
   const commitIngredientName = async (ingredientId: string, rawValue: string, originalName: string) => {
@@ -210,9 +253,18 @@ export default function MealDetail() {
         <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-5 animate-fade-up stagger-2">
           {/* Ingredient sidebar (horizontal scroll on mobile, vertical list on desktop) */}
           <div>
-            <p className="label-section px-1 mb-3">
-              Ingredients
-            </p>
+            <div className="flex items-center justify-between px-1 mb-3">
+              <p className="label-section">
+                Ingredients
+              </p>
+              <button
+                onClick={handleAddIngredient}
+                className="w-6 h-6 flex items-center justify-center rounded-lg text-ink-ghost hover:text-forest-muted hover:bg-white/60 transition-colors"
+                title="Add ingredient"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
             <div className="flex md:flex-col gap-1.5 md:gap-1 overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0 snap-x snap-mandatory md:snap-none">
               {search.ingredients.map(ing => {
                 const status = SEARCH_STATUS_STYLES[ing.searchStatus]
@@ -222,7 +274,7 @@ export default function MealDetail() {
                     key={ing.id}
                     onClick={() => setSelectedIngredientId(ing.id)}
                     className={[
-                      'text-left px-3 py-2.5 rounded-xl text-sm transition-all duration-200 flex-shrink-0 md:flex-shrink md:w-full snap-start',
+                      'group/ing text-left px-3 py-2.5 rounded-xl text-sm transition-all duration-200 flex-shrink-0 md:flex-shrink md:w-full snap-start',
                       (activeIngredient?.id === ing.id)
                         ? 'bg-white text-ink font-medium shadow-card border border-parchment'
                         : 'text-ink-muted hover:bg-white/60',
@@ -278,6 +330,17 @@ export default function MealDetail() {
                           {ing.searchStatus === 'done' ? ing.products.length : ing.searchStatus}
                         </span>
                         <div className={`w-2 h-2 rounded-full ${status.dot}`} />
+                        <button
+                          type="button"
+                          onClick={e => {
+                            e.stopPropagation()
+                            handleDeleteIngredient(ing.id)
+                          }}
+                          className="w-4 h-4 flex items-center justify-center opacity-0 group-hover/ing:opacity-100 transition-opacity text-ink-ghost hover:text-terracotta"
+                          title="Delete ingredient"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
                       </span>
                     </div>
                     {ing.source === 'manual' && (
@@ -303,6 +366,26 @@ export default function MealDetail() {
 
             {search.ingredients.length === 0 && (
               <p className="text-xs text-ink-ghost px-1">No ingredients yet</p>
+            )}
+
+            {search.ingredients.length > 0 && (
+              <button
+                onClick={handleFetchProducts}
+                disabled={fetchingProducts || !hasPendingIngredients}
+                className="btn-primary w-full mt-3"
+              >
+                {fetchingProducts ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Searching...
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-4 h-4" />
+                    Find products
+                  </>
+                )}
+              </button>
             )}
           </div>
 

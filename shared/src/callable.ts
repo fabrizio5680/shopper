@@ -76,3 +76,12 @@ export interface SaveRecipeRequest {
 export interface SaveRecipeResponse {
   recipeId: string
 }
+
+// searchProducts
+export interface SearchProductsRequest {
+  groupId: string
+}
+
+export interface SearchProductsResponse {
+  success: boolean
+}

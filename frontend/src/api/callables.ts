@@ -11,6 +11,8 @@ import type {
   RescanIngredientsResponse,
   DeleteRecipeSearchRequest,
   DeleteRecipeSearchResponse,
+  SearchProductsRequest,
+  SearchProductsResponse,
 } from '@shopper/shared'
 
 export const extractIngredients = httpsCallable<
@@ -37,3 +39,8 @@ export const saveRecipe = httpsCallable<
   SaveRecipeRequest,
   SaveRecipeResponse
 >(functions, 'saveRecipe')
+
+export const searchProducts = httpsCallable<
+  SearchProductsRequest,
+  SearchProductsResponse
+>(functions, 'searchProducts')
