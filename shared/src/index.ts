@@ -8,9 +8,9 @@ export type {
   Ingredient,
   SuggestedIngredient,
   RecipeSearch,
-} from './types.ts'
+} from './types'
 
-export { PILLS, PILL_CATEGORIES } from './pills.ts'
+export { PILLS, PILL_CATEGORIES } from './pills'
 
 export type {
   ExtractIngredientsRequest,
@@ -25,4 +25,4 @@ export type {
   SaveManualIngredientResponse,
   DeleteRecipeSearchRequest,
   DeleteRecipeSearchResponse,
-} from './callable.ts'
+} from './callable'

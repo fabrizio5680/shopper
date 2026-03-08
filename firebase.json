@@ -2,6 +2,20 @@
   "firestore": {
     "rules": "firestore.rules"
   },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": ["npm --prefix \"$RESOURCE_DIR\" run build"]
+    }
+  ],
   "hosting": {
     "public": "frontend/dist",
     "ignore": [
@@ -51,8 +65,11 @@
     "firestore": {
       "port": 8080
     },
+    "functions": {
+      "port": 5001
+    },
     "hosting": {
-      "port": 5000
+      "port": 5002
     },
     "ui": {
       "enabled": true,

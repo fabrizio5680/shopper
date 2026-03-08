@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAtom } from 'jotai'
+import { useAtomValue } from 'jotai'
 import { useNavigate } from 'react-router-dom'
 import { Plus, X, UtensilsCrossed, ShoppingCart, CheckSquare } from 'lucide-react'
 import Layout from '../components/layout/Layout'
@@ -7,7 +7,8 @@ import RecipeSearchCard from '../components/meals/RecipeSearchCard'
 import MealBuilder from '../components/input/MealBuilder'
 import IngredientApprovalPanel from '../components/meals/IngredientApprovalPanel'
 import ShoppingList from '../components/meals/ShoppingList'
-import type { RecipeSearch, SuggestedIngredient } from '../types'
+import { saveIngredients, deleteRecipeSearch } from '../api/callables'
+import type { SuggestedIngredient } from '../types'
 import { searchesAtom } from '../atoms/searches'
 
 type PanelState =
@@ -17,46 +18,44 @@ type PanelState =
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const [searches, setSearches] = useAtom(searchesAtom)
+  const searches = useAtomValue(searchesAtom)
   const [panel, setPanel] = useState<PanelState>({ mode: 'none' })
   const [selectMode, setSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [showShoppingList, setShowShoppingList] = useState(false)
 
-  const handleDelete = (id: string) => {
-    setSearches(prev => prev.filter(s => s.id !== id))
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteRecipeSearch({ groupId: id })
+      // Firestore onSnapshot will remove it from the list automatically
+    } catch {
+      // RecipeSearchCard handles optimistic UI + error restore
+    }
   }
 
   const handleSuggestionsReady = (groupId: string, recipeName: string, suggestions: SuggestedIngredient[]) => {
     setPanel({ mode: 'approval', groupId, recipeName, suggestions })
   }
 
-  const handleApprovalSave = (groupId: string, approved: SuggestedIngredient[]) => {
-    const newSearch: RecipeSearch = {
-      id: groupId,
-      recipeName: panel.mode === 'approval' ? panel.recipeName : 'Recipe',
-      activePills: [],
-      keywords: [],
-      status: 'searching',
-      errorMessage: null,
-      createdAt: new Date(),
-      ingredients: approved.map((ing, i) => ({
-        id: `${groupId}-ing-${i}`,
-        name: ing.name,
-        quantity: ing.quantity,
-        notes: ing.notes,
-        searchStatus: 'pending',
-        source: 'ai',
-        selectedProducts: null,
-        products: [],
-      })),
+  const handleApprovalSave = async (groupId: string, approved: SuggestedIngredient[]) => {
+    try {
+      await saveIngredients({ groupId, ingredients: approved })
+      setPanel({ mode: 'none' })
+      navigate(`/search/${groupId}`)
+    } catch {
+      // Error is handled in IngredientApprovalPanel
     }
-    setSearches(prev => [newSearch, ...prev])
-    setPanel({ mode: 'none' })
-    navigate(`/search/${groupId}`)
   }
 
-  const handleApprovalCancel = () => {
+  const handleApprovalCancel = async () => {
+    // Clean up the group doc if cancelling initial extraction
+    if (panel.mode === 'approval') {
+      try {
+        await deleteRecipeSearch({ groupId: panel.groupId })
+      } catch {
+        // Best effort cleanup
+      }
+    }
     setPanel({ mode: 'none' })
   }
 

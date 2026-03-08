@@ -10,6 +10,7 @@ export interface Pill {
   id: string
   label: string
   category: 'dietary' | 'quality' | 'health' | 'lifestyle'
+  promptDescription: string
 }
 
 export interface Product {

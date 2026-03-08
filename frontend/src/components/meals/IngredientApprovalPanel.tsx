@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ExternalLink, Loader2, Check } from 'lucide-react'
 import type { SuggestedIngredient } from '../../types'
-import { supermarketSearchUrls } from '../../data/mock'
+import { supermarketSearchUrls } from '../../utils/supermarket-urls'
 import { SUPERMARKET_META } from '../../styles/design-tokens'
 import type { Supermarket } from '../../styles/design-tokens'
 

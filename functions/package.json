@@ -1,0 +1,27 @@
+{
+  "name": "functions",
+  "private": true,
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "serve": "npm run build && firebase emulators:start --only functions",
+    "shell": "npm run build && firebase functions:shell",
+    "deploy": "firebase deploy --only functions",
+    "lint": "eslint src/"
+  },
+  "engines": {
+    "node": "20"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.39.0",
+    "@shopper/shared": "*",
+    "firebase-admin": "13.0.2",
+    "firebase-functions": "6.3.0",
+    "openai": "^6.27.0",
+    "zod": "3.24.2"
+  },
+  "devDependencies": {
+    "typescript": "5.7.3"
+  }
+}

@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { ChefHat, Loader2, ChevronDown, ChevronUp, Sparkles } from 'lucide-react'
 import PillSelector from './PillSelector'
 import KeywordRefinement from './KeywordRefinement'
+import { extractIngredients } from '../../api/callables'
 import type { SuggestedIngredient } from '../../types'
-import { MOCK_SUGGESTED_INGREDIENTS } from '../../data/mock'
 
 interface Props {
   onSuggestionsReady: (groupId: string, recipeName: string, ingredients: SuggestedIngredient[]) => void
@@ -26,17 +26,22 @@ export default function MealBuilder({ onSuggestionsReady }: Props) {
     setError('')
     setLoading(true)
 
-    await new Promise(r => setTimeout(r, 1500))
-
-    if (/^[0-9]+$/.test(recipeName.trim())) {
-      setError("That doesn't look like a recipe — try something like 'Chicken Curry'")
+    try {
+      const result = await extractIngredients({
+        recipeName: recipeName.trim(),
+        activePills,
+        keywords,
+      })
+      const { groupId, recipeName: name, suggestions } = result.data
+      onSuggestionsReady(groupId, name, suggestions)
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : 'Something went wrong. Please try again.'
+      // Firebase callable errors have a .message with the server error
+      setError(message)
+    } finally {
       setLoading(false)
-      return
     }
-
-    const mockGroupId = `group-${Date.now()}`
-    onSuggestionsReady(mockGroupId, recipeName.trim(), MOCK_SUGGESTED_INGREDIENTS)
-    setLoading(false)
   }
 
   return (
@@ -116,7 +121,7 @@ export default function MealBuilder({ onSuggestionsReady }: Props) {
       </div>
 
       {/* Submit */}
-      <div className="px-4 sm:px-6 py-5 bg-cream/30 border-t border-parchment/60">
+      <div className="px-4 sm:px-6 py-5 bg-cream/30">
         <button
           type="submit"
           disabled={!canSubmit}

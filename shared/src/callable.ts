@@ -1,4 +1,4 @@
-import type { SuggestedIngredient, Supermarket, Product } from './types.ts'
+import type { SuggestedIngredient, Supermarket, Product } from './types'
 
 // extractIngredients
 export interface ExtractIngredientsRequest {

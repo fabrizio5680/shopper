@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { userAtom, authListenerAtom } from './atoms/auth'
+import { searchesListenerAtom } from './atoms/searches'
 import Home from './pages/Home'
 import Dashboard from './pages/Dashboard'
 import MealDetail from './pages/MealDetail'
@@ -29,11 +30,18 @@ function AppRoutes() {
 
 export default function App() {
   const initAuth = useSetAtom(authListenerAtom)
+  const startSearchesListener = useSetAtom(searchesListenerAtom)
+  const user = useAtomValue(userAtom)
 
   useEffect(() => {
     const unsubscribe = initAuth()
     return () => { unsubscribe() }
   }, [initAuth])
+
+  // Start/stop Firestore listener when auth state changes
+  useEffect(() => {
+    startSearchesListener(user?.uid ?? null)
+  }, [user, startSearchesListener])
 
   return (
     <BrowserRouter>
