@@ -1,0 +1,368 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════
+   SHOPPER — "Market Fresh" Design System
+   ═══════════════════════════════════════════ */
+
+@theme {
+  /* ── Breakpoints ── */
+  --breakpoint-xs: 475px;
+
+  /* ── Core palette ── */
+  --color-cream: #FAF7F2;
+  --color-cream-dark: #F0EBE3;
+  --color-parchment: #EDE8DF;
+  --color-forest: #1B4332;
+  --color-forest-light: #2D6A4F;
+  --color-forest-muted: #40916C;
+  --color-sage: #74A98B;
+  --color-sage-light: #B7D7C8;
+  --color-sage-faint: #DAE9E0;
+  --color-terracotta: #C1604D;
+  --color-terracotta-light: #E89B8B;
+  --color-terracotta-faint: #FDF0ED;
+  --color-bark: #3D2C1E;
+  --color-bark-light: #6B5344;
+  --color-ink: #1A1A1A;
+  --color-ink-muted: #4A4A4A;
+  --color-ink-faint: #8B8B8B;
+  --color-ink-ghost: #B5B0A8;
+
+  /* ── Supermarket brand colors ── */
+  --color-tesco: #00539F;
+  --color-tesco-light: #E8F0FA;
+  --color-supervalu: #D42828;
+  --color-supervalu-light: #FDEAEA;
+  --color-dunnes: #1A1F36;
+  --color-dunnes-light: #EEEEF3;
+  --color-aldi: #0050AA;
+  --color-aldi-light: #E6F0FA;
+  --color-lidl: #D4A843;
+  --color-lidl-light: #FFF8E8;
+
+  /* ── Typography ── */
+  --font-display: "DM Serif Display", Georgia, "Times New Roman", serif;
+  --font-body: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  /* ── Semantic radii ── */
+  --radius-sm: 0.5rem;    /* 8px  — small chips, badges */
+  --radius-md: 0.75rem;   /* 12px — inputs, buttons */
+  --radius-lg: 1rem;      /* 16px — cards, panels */
+  --radius-xl: 1.25rem;   /* 20px — main containers */
+  --radius-full: 9999px;  /* pills, avatars */
+
+  /* ── Shadows ── */
+  --shadow-card: 0 1px 3px rgba(27, 67, 50, 0.06), 0 4px 12px rgba(27, 67, 50, 0.04);
+  --shadow-card-hover: 0 2px 8px rgba(27, 67, 50, 0.08), 0 8px 24px rgba(27, 67, 50, 0.06);
+  --shadow-elevated: 0 4px 16px rgba(27, 67, 50, 0.10), 0 12px 40px rgba(27, 67, 50, 0.08);
+  --shadow-glow: 0 0 0 3px rgba(45, 106, 79, 0.15);
+
+  /* ── Animations ── */
+  --animate-fade-in: fade-in 0.5s ease-out both;
+  --animate-fade-up: fade-up 0.5s ease-out both;
+  --animate-slide-in: slide-in 0.4s ease-out both;
+  --animate-scale-in: scale-in 0.3s ease-out both;
+  --animate-shimmer: shimmer 2s ease-in-out infinite;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-pulse-soft: pulse-soft 3s ease-in-out infinite;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes shimmer {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* ═══════════════════════════════════════════
+   Component Classes — @layer components
+   ═══════════════════════════════════════════ */
+
+@layer components {
+  /* ── Buttons ── */
+
+  /* Primary: forest green, white text, lift on hover */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5
+           bg-forest hover:bg-forest-light text-white text-sm font-semibold
+           rounded-xl transition-all duration-200
+           shadow-sm hover:shadow-card hover:-translate-y-0.5 active:translate-y-0
+           disabled:bg-parchment disabled:text-ink-ghost disabled:shadow-none disabled:translate-y-0;
+  }
+
+  /* Secondary: white, bordered, subtle hover */
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5
+           border border-parchment hover:border-forest-muted
+           text-sm text-ink-muted hover:text-forest font-medium
+           rounded-xl transition-all duration-200
+           bg-white hover:shadow-sm;
+  }
+
+  /* Ghost: text-only, minimal — for cancel/back links */
+  .btn-ghost {
+    @apply inline-flex items-center gap-1.5 text-sm
+           text-ink-faint hover:text-ink-muted font-medium
+           transition-colors duration-200;
+  }
+
+  /* Danger ghost: text-only, terracotta on hover — for delete */
+  .btn-danger-ghost {
+    @apply p-2 text-ink-ghost hover:text-terracotta
+           rounded-lg hover:bg-terracotta-faint
+           transition-all duration-200;
+  }
+
+  /* ── Cards ── */
+
+  /* Standard card panel */
+  .card {
+    @apply bg-white rounded-2xl border border-parchment shadow-card overflow-hidden;
+  }
+
+  /* Interactive card (clickable, with hover) */
+  .card-interactive {
+    @apply bg-white rounded-2xl border border-parchment
+           transition-all duration-300 cursor-pointer
+           hover:border-sage hover:shadow-card-hover;
+  }
+
+  /* Card inner section with bottom border */
+  .card-section {
+    @apply px-4 sm:px-6 py-4 sm:py-5 border-b border-parchment/60;
+  }
+
+  /* Card footer (cream background) */
+  .card-footer {
+    @apply px-4 sm:px-6 py-4 border-t border-parchment/60 bg-cream/40;
+  }
+
+  /* ── Inputs ── */
+
+  /* Standard text input */
+  .input {
+    @apply w-full px-3 py-2.5 rounded-xl border border-parchment bg-cream/50
+           text-sm text-ink placeholder:text-ink-ghost
+           focus:outline-none focus:border-forest-muted focus:ring-2 focus:ring-forest-muted/10 focus:bg-white
+           transition-all duration-200;
+  }
+
+  /* Compact input (for secondary fields) */
+  .input-sm {
+    @apply w-full px-3 py-2 rounded-lg border border-parchment bg-white
+           text-sm text-ink placeholder:text-ink-ghost
+           focus:outline-none focus:border-forest-muted focus:ring-2 focus:ring-forest-muted/10
+           transition-all duration-200;
+  }
+
+  /* ── Labels ── */
+
+  /* Section label: tiny, uppercase, ghost color */
+  .label-section {
+    @apply text-[11px] font-semibold uppercase tracking-widest text-ink-ghost;
+  }
+
+  /* Field label */
+  .label-field {
+    @apply block text-sm font-semibold text-ink-muted mb-2 tracking-wide;
+  }
+
+  /* ── Badges & Pills ── */
+
+  /* Pill badge (rounded-full chips for tags/pills) */
+  .pill {
+    @apply px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  /* Active pill (forest) */
+  .pill-active {
+    @apply px-2.5 py-0.5 rounded-full text-xs font-medium bg-sage-faint/50 text-forest-muted;
+  }
+
+  /* Muted pill (parchment) */
+  .pill-muted {
+    @apply px-2.5 py-0.5 rounded-full text-xs font-medium bg-parchment/60 text-ink-faint;
+  }
+
+  /* Status badge (slightly bolder) */
+  .badge {
+    @apply px-2.5 py-0.5 rounded-full text-xs font-semibold;
+  }
+
+  /* ── Checkbox (custom) ── */
+
+  .checkbox-unchecked {
+    @apply w-5 h-5 rounded-md border-2 flex items-center justify-center
+           transition-all duration-200 border-ink-ghost/40 bg-white;
+  }
+  .checkbox-checked {
+    @apply w-5 h-5 rounded-md border-2 flex items-center justify-center
+           transition-all duration-200 bg-forest border-forest scale-105;
+  }
+
+  /* ── Supermarket tab button ── */
+
+  .sm-tab {
+    @apply flex-shrink-0 px-3.5 py-2 text-sm font-semibold rounded-lg border
+           transition-all duration-200;
+  }
+  .sm-tab-inactive {
+    @apply flex-shrink-0 px-3.5 py-2 text-sm font-semibold rounded-lg border
+           transition-all duration-200 border-transparent text-ink-faint hover:text-ink-muted hover:bg-cream-dark;
+  }
+
+  /* Tab badge count */
+  .sm-tab-badge {
+    @apply ml-1.5 px-1.5 py-0.5 rounded-full text-xs font-bold;
+  }
+
+  /* ── Collapsible section trigger ── */
+
+  .collapsible-trigger {
+    @apply w-full flex items-center justify-between px-4 sm:px-6 py-4
+           text-sm font-medium text-ink-muted
+           hover:bg-cream/50 transition-colors duration-200;
+  }
+
+  /* ── Error text ── */
+
+  .error-text {
+    @apply text-sm text-terracotta font-medium;
+  }
+
+  .error-banner {
+    @apply text-xs text-terracotta bg-terracotta-faint px-3 py-2 rounded-lg font-medium;
+  }
+
+  /* ── Empty state ── */
+
+  .empty-state {
+    @apply text-center py-12;
+  }
+  .empty-state-icon {
+    @apply w-12 h-12 mx-auto mb-4 rounded-full bg-cream-dark
+           flex items-center justify-center;
+  }
+  .empty-state-text {
+    @apply text-sm text-ink-ghost;
+  }
+}
+
+/* ── Base ── */
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: clip;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  background-color: var(--color-cream);
+  overflow-x: clip;
+}
+
+#root {
+  overflow-x: clip;
+}
+
+/* ── Grain texture overlay ── */
+.grain::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ── Stagger delays ── */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }
+.stagger-7 { animation-delay: 0.35s; }
+.stagger-8 { animation-delay: 0.4s; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-ink-ghost); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-ink-faint); }
+
+/* ── Focus ── */
+*:focus-visible {
+  outline: 2px solid var(--color-forest-light);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Selection ── */
+::selection {
+  background-color: var(--color-sage-light);
+  color: var(--color-forest);
+}
+
+/* ── Mobile optimizations ── */
+
+/* Safe area insets for notched devices */
+@supports (padding: env(safe-area-inset-bottom)) {
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Hide scrollbar for horizontal scroll areas */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Prevent text size adjustment on orientation change */
+@media screen and (max-width: 639px) {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* Prevent zoom on input focus (iOS) */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
